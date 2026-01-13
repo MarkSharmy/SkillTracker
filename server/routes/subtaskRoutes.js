@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { toggleSubtask } = require('../controllers/subtaskController');
+const { createSubtask, toggleSubtask, updateSubtask, deleteSubtask } = require('../controllers/subtaskController');
 
 router.post('/', createSubtask);
 router.patch('/:id/toggle', toggleSubtask);
