@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const goalRoutes = require('./routes/goalRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+const subtaskRoutes = require('./routes/subtaskRoutes');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -25,9 +28,10 @@ app.get('/', (req, res) => {
 });
 
 // 4. Routes (To be developed)
-// These will handle the User, Goal, Task, and Subtask logic
-// app.use('/api/users', require('./routes/userRoutes'));
-// app.use('/api/goals', require('./routes/goalRoutes'));
+app.use('/api/goals', goalRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/subtasks', subtaskRoutes);
+app.use('/api/users', require('./routes/userRoutes'));
 
 // 5. Start Server
 app.listen(PORT, () => {
