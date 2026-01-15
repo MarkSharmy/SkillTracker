@@ -1,6 +1,6 @@
-const Task = require('../models/Task');
-const Goal = require('../models/Goal');
-const Subtask = require('../models/Subtask');
+const Task = require('../models/task');
+const Goal = require('../models/goal');
+const Subtask = require('../models/subtask');
 
 // HELPER: Recalculate Goal Progress
 // Called whenever a task is added, removed, or its progress changes

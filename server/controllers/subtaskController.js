@@ -1,6 +1,6 @@
-const Subtask = require('../models/Subtask');
-const Task = require('../models/Task');
-const Goal = require('../models/Goal');
+const Subtask = require('../models/subtask');
+const Task = require('../models/task');
+const Goal = require('../models/goal');
 
 // HELPER FUNCTION: Recalculate progress for Task and Goal
 // This ensures "Progress calculations must always reflect current state" (Requirement 3.4)

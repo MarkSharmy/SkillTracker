@@ -1,6 +1,6 @@
-const Goal = require('../models/Goal');
-const Task = require('../models/Task');
-const Subtask = require('../models/Subtask');
+const Goal = require('../models/goal');
+const Task = require('../models/task');
+const Subtask = require('../models/subtask');
 
 // @desc    Create a new goal
 // @route   POST /api/goals
