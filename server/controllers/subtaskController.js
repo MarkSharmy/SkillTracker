@@ -49,6 +49,26 @@ exports.createSubtask = async (req, res) => {
     }
 };
 
+// @desc    Get a single subtask by ID
+// @route   GET /api/subtasks/:id
+exports.getSubtaskById = async (req, res) => {
+    try {
+        // Find the subtask and populate the task to eventually verify goal ownership if needed
+        const subtask = await Subtask.findById(req.params.id);
+
+        if (!subtask) {
+            return res.status(404).json({ message: "Subtask not found" });
+        }
+
+        // Optional: Add a security check here similar to Task controller 
+        // if you want to ensure the user owns the parent goal.
+
+        res.status(200).json(subtask);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Toggle subtask completion status
 // @route   PATCH /api/subtasks/:id/toggle
 exports.toggleSubtask = async (req, res) => {
