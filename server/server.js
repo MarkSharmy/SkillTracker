@@ -18,9 +18,20 @@ app.use(express.json()); // Parses incoming JSON requests
 
 // 2. Database Connection
 // Connects to MongoDB as per Technical Requirement 1.2
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ Connected to SkillTracker Database'))
-  .catch((err) => console.error('❌ Database connection error:', err));
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      // Give it 60 seconds instead of the default 30
+      connectTimeoutMS: 60000, 
+      serverSelectionTimeoutMS: 60000, 
+    });
+    console.log("MongoDB Connected");
+  } catch (error) {
+    console.error("Database connection error:", error);
+  }
+};
+
+connectDB();
 
 // 3. Basic Route for Testing
 app.get('/', (req, res) => {
