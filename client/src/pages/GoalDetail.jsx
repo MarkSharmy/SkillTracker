@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { API } from '../api'; // Use the Axios instance we created
-import ProgressBar from '../components/ProgressBar';
-import { CheckCircle, Circle, ChevronDown, ChevronRight } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { API } from '../api';
+import { 
+  CheckCircle, Circle, ArrowLeft, List, Target, TrendingUp, Trash2, Plus, X 
+} from 'lucide-react';
+import './goalDetail.css';
 
 const GoalDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [goal, setGoal] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
 
   useEffect(() => {
     fetchGoalData();
@@ -25,71 +32,161 @@ const GoalDetail = () => {
     }
   };
 
-  const handleSubtaskToggle = async (subtaskId) => {
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    try {
+      // Sending title and the parent goal ID
+      await API.post('/tasks', { 
+        title: newTaskTitle, 
+        goalId: id 
+      });
+      setNewTaskTitle('');
+      setIsModalOpen(false);
+      fetchGoalData(); // Refresh list
+    } catch (err) {
+      console.error("Task creation failed", err);
+    }
+  };
+
+  const handleDeleteGoal = async () => {
+    const confirmed = window.confirm("Are you sure you want to delete this goal? This action cannot be undone.");
+    if (!confirmed) return;
+
+    try {
+      await API.delete(`/goals/${id}`);
+      navigate('/dashboard'); 
+    } catch (err) {
+      alert("Failed to delete goal.");
+    }
+  };
+
+  const handleSubtaskToggle = async (e, subtaskId) => {
+    e.stopPropagation();
     try {
       await API.patch(`/subtasks/${subtaskId}/toggle`);
-      // Refresh data to show "immediate feedback" (Requirement 3.2)
       fetchGoalData(); 
     } catch (err) {
       console.error("Toggle failed", err);
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading Goal...</div>;
+  if (loading) return <div className="loading">Analyzing Goal Path...</div>;
+
+  const totalSubtasks = tasks.reduce((acc, t) => acc + (t.subtasks?.length || 0), 0);
+  const completedSubtasks = tasks.reduce((acc, t) => 
+    acc + (t.subtasks?.filter(s => s.isCompleted).length || 0), 0
+  );
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      {/* Goal Header */}
-      <header className="mb-10">
-        <h1 className="text-4xl font-bold text-gray-900">{goal.title}</h1>
-        <p className="text-gray-500 mt-2">{goal.description}</p>
-        <div className="mt-6">
-          <div className="flex justify-between text-sm mb-1 font-medium">
-            <span>Overall Progress</span>
-            <span>{goal.progress}%</span>
+    <div className="goaldetail-container">
+      <header className="detail-header">
+        <div className="header-content flex justify-between items-start">
+          <div>
+            <Link to="/dashboard" className="back-link">
+              <ArrowLeft size={18} /> Back to Dashboard
+            </Link>
+            <h1 className="goal-main-title">{goal.title}</h1>
+            <p className="text-gray-500 font-bold mt-2 uppercase tracking-widest text-xs">
+              {goal.description || "No description provided"}
+            </p>
           </div>
-          <ProgressBar progress={goal.progress} color="bg-green-500" />
+          
+          <div className="flex gap-3">
+            <button onClick={() => setIsModalOpen(true)} className="create-btn">
+              <Plus size={20} />
+              <span>Add Milestone</span>
+            </button>
+            <button onClick={handleDeleteGoal} className="delete-goal-btn">
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Task List */}
-      <div className="space-y-8">
-        {tasks.map(task => (
-          <div key={task._id} className={`p-5 rounded-xl border ${task.isCompleted ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className={`text-lg font-semibold ${task.isCompleted ? 'text-green-800' : 'text-gray-800'}`}>
-                {task.title}
-              </h3>
-              <span className="text-xs font-bold px-2 py-1 bg-gray-200 rounded text-gray-600">
-                {task.progress}%
-              </span>
-            </div>
-            
-            <ProgressBar progress={task.progress} color={task.isCompleted ? "bg-green-600" : "bg-blue-500"} />
-
-            {/* Subtasks - This implements the Hierarchy (Requirement 5.1) */}
-            <div className="mt-4 ml-2 space-y-3">
-              {task.subtasks?.map(sub => (
-                <div 
-                  key={sub._id} 
-                  onClick={() => handleSubtaskToggle(sub._id)}
-                  className="flex items-center gap-3 cursor-pointer group"
-                >
-                  {sub.isCompleted ? 
-                    <CheckCircle className="text-green-500 w-5 h-5" /> : 
-                    <Circle className="text-gray-300 group-hover:text-blue-400 w-5 h-5" />
-                  }
-                  <span className={`text-sm ${sub.isCompleted ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                    {sub.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="stats-grid">
+        <StatCard title="Total Tasks" value={tasks.length} icon={<List className="text-blue-500" />} colorClass="bg-blue-50" borderClass="border-blue-200" />
+        <StatCard title="Steps Done" value={`${completedSubtasks}/${totalSubtasks}`} icon={<CheckCircle className="text-green-500" />} colorClass="bg-green-50" borderClass="border-green-200" />
+        <StatCard title="Goal Progress" value={`${goal.progress}%`} icon={<TrendingUp className="text-orange-500" />} colorClass="bg-orange-50" borderClass="border-orange-200" />
       </div>
+
+      <div className="tasks-section">
+        <h2 className="section-title">Milestones & Tasks</h2>
+        
+        {tasks.length === 0 ? (
+          <p className="text-gray-400 italic">No milestones yet. Click "Add Milestone" to start breaking down your goal.</p>
+        ) : (
+          tasks.map(task => (
+            <div key={task._id} className="task-card">
+              <Link to={`/tasks/${task._id}`} className="task-card-nav">
+                <div className="task-card-header">
+                  <div className="task-title-area">
+                    <div className="goal-icon-bg"><Target size={20} className="text-gray-400" /></div>
+                    <h3 className="goal-title">{task.title}</h3>
+                  </div>
+                  <div className="task-divider"></div>
+                  <div className="goal-right">
+                    <span className="font-black text-xs text-gray-900 uppercase">Task Progress:</span>
+                    <div className="progress-container">
+                      <div className="progress-fill" style={{ width: `${task.progress}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-500">{task.progress}%</span>
+                  </div>
+                </div>
+              </Link>
+
+              <div className="subtask-list">
+                {task.subtasks?.map(sub => (
+                  <div key={sub._id} className="subtask-item" onClick={(e) => handleSubtaskToggle(e, sub._id)}>
+                    {sub.isCompleted ? <CheckCircle className="text-green-500" size={20} /> : <Circle className="text-gray-300" size={20} />}
+                    <span className={`subtask-text ${sub.isCompleted ? 'completed' : ''}`}>{sub.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* CREATE TASK MODAL */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-pop">
+            <div className="modal-header">
+              <h2 className="modal-title">New Milestone</h2>
+              <button onClick={() => setIsModalOpen(false)} className="close-btn"><X /></button>
+            </div>
+            <form onSubmit={handleCreateTask} className="modal-form">
+              <div className="input-group">
+                <label>Milestone Title</label>
+                <input 
+                  autoFocus
+                  required
+                  type="text" 
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="e.g., Complete Fundamentals Module" 
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="cancel-btn">Cancel</button>
+                <button type="submit" className="submit-btn">Create Milestone</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const StatCard = ({ title, value, icon, colorClass, borderClass }) => (
+  <div className={`stat-card ${colorClass} ${borderClass}`}>
+    <div className="stat-icon-wrapper">{icon}</div>
+    <div className="stat-info">
+      <span className="stat-label">{title}:</span>
+      <span className="stat-value">{value}</span>
+    </div>
+  </div>
+);
 
 export default GoalDetail;

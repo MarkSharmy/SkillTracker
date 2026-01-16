@@ -1,109 +1,161 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../api';
-import ProgressBar from '../components/ProgressBar';
-import { Plus, Target, ChevronRight, TrendingUp } from 'lucide-react';
+import { Plus, Target, TrendingUp, CheckCircle, List, LogOut } from 'lucide-react';
+import CreateGoalModal from '../components/CreateGoalModal';
+import './dashboard.css'; 
 
 const Dashboard = () => {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchGoals = async () => {
-      try {
-        const { data } = await API.get('/goals');
-        setGoals(data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch goals", err);
-        setLoading(false);
-      }
-    };
     fetchGoals();
   }, []);
 
-  if (loading) return <div className="flex justify-center mt-20">Loading your progress...</div>;
+  const fetchGoals = async () => {
+    try {
+      const { data } = await API.get('/goals');
+      setGoals(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      // If unauthorized (token expired), force logout
+      if (err.response?.status === 401) handleLogout();
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    // 1. Clear the token from storage
+    localStorage.removeItem('token');
+    // 2. Redirect to the landing/login page
+    navigate('/');
+  };
+
+  // --- FRONTEND LOGIC CALCULATIONS ---
+  const avgProgress = goals.length > 0 
+    ? Math.round(goals.reduce((acc, curr) => acc + (curr.progress || 0), 0) / goals.length) 
+    : 0;
+
+  const totalTasksCompleted = goals.reduce((acc, goal) => {
+    const completedInGoal = goal.tasks?.filter(task => task.completed).length || 0;
+    return acc + completedInGoal;
+  }, 0);
+
+  const completedGoals = goals.filter(g => g.progress === 100).length;
+
+  if (loading) return <div className="loading">Loading Skill Tracker...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Header Section */}
-      <header className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-6 py-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Goals</h1>
-            <p className="text-gray-500 mt-1">Track your progress and achieve more.</p>
-          </div>
-          <Link 
-            to="/create-goal" 
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <Plus size={20} /> New Goal
-          </Link>
+    <div className="dashboard-container">
+      {/* --- NAVBAR --- */}
+      <nav className="navbar">
+        <h1 className="brand-logo">Skill Tracker</h1>
+        
+        <div className="nav-actions">
+          <button className="create-btn" onClick={() => setIsModalOpen(true)}>
+            Create Goal <Plus size={20} />
+          </button>
+          
+          <button className="logout-btn" onClick={handleLogout} title="Logout">
+            <LogOut size={20} />
+          </button>
         </div>
-      </header>
+      </nav>
 
-      {/* Stats Summary Section */}
-      <div className="max-w-5xl mx-auto px-6 mt-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 text-blue-600 rounded-lg"><Target /></div>
-            <div>
-              <p className="text-sm text-gray-500">Active Goals</p>
-              <p className="text-xl font-bold">{goals.length}</p>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 flex items-center gap-4">
-            <div className="p-3 bg-green-100 text-green-600 rounded-lg"><TrendingUp /></div>
-            <div>
-              <p className="text-sm text-gray-500">Avg. Progress</p>
-              <p className="text-xl font-bold">
-                {goals.length > 0 
-                  ? Math.round(goals.reduce((a, b) => a + b.progress, 0) / goals.length) 
-                  : 0}%
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* --- STATS GRID --- */}
+      <div className="stats-grid">
+        <StatCard 
+          title="Active Goals" 
+          value={goals.length} 
+          icon={<Target className="text-blue-500" />} 
+          colorClass="bg-blue-50" 
+          borderClass="border-blue-200" 
+        />
+        <StatCard 
+          title="Tasks Completed" 
+          value={totalTasksCompleted} 
+          icon={<CheckCircle className="text-green-500" />} 
+          colorClass="bg-green-50" 
+          borderClass="border-green-200" 
+        />
+        <StatCard 
+          title="Avg Progress" 
+          value={`${avgProgress}%`} 
+          icon={<TrendingUp className="text-orange-500" />} 
+          colorClass="bg-orange-50" 
+          borderClass="border-orange-200" 
+        />
+        <StatCard 
+          title="Goals Finished" 
+          value={completedGoals} 
+          icon={<CheckCircle className="text-blue-500" />} 
+          colorClass="bg-blue-50" 
+          borderClass="border-blue-200" 
+        />
+      </div>
 
-        {/* Goals Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {goals.map((goal) => (
-            <Link key={goal._id} to={`/goals/${goal._id}`} className="group">
-              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm group-hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue-500 bg-blue-50 px-2 py-1 rounded">
-                      {goal.category || 'General'}
-                    </span>
-                    <h3 className="text-xl font-bold text-gray-900 mt-2">{goal.title}</h3>
+      {/* --- GOALS LIST --- */}
+      <div className="goals-section">
+        <h2 className="section-title">My Goals</h2>
+        
+        {goals.length === 0 ? (
+          <div className="no-goals">
+            <p>No goals found. Click "Create Goal" to get started!</p>
+          </div>
+        ) : (
+          goals.map((goal) => (
+            <Link key={goal._id} to={`/goals/${goal._id}`} className="goal-item-link">
+              <div className="goal-card">
+                <div className="goal-left">
+                  <div className="goal-icon-bg">
+                    <Target size={24} className="text-gray-600" />
                   </div>
-                  <ChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                  <h3 className="goal-title">{goal.title}</h3>
                 </div>
-                
-                <p className="text-gray-500 text-sm line-clamp-2 mb-6">
-                  {goal.description}
-                </p>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium text-gray-700">Progress</span>
-                    <span className="font-bold text-blue-600">{goal.progress}%</span>
+                <div className="goal-middle">
+                  <div className="flex items-center gap-3">
+                    <List size={20} className="text-gray-400" />
+                    <span className="task-count-text">
+                      Number of Tasks: <span className="text-gray-900 ml-1">{goal.tasks?.length || 0}</span>
+                    </span>
                   </div>
-                  <ProgressBar progress={goal.progress} />
+                </div>
+
+                <div className="goal-right">
+                  <span className="font-black text-sm text-gray-900">Progress:</span>
+                  <div className="progress-container">
+                    <div className="progress-fill" style={{ width: `${goal.progress}%` }} />
+                  </div>
+                  <span className="text-xs font-bold text-gray-500">{goal.progress}%</span>
                 </div>
               </div>
             </Link>
-          ))}
-
-          {goals.length === 0 && (
-            <div className="col-span-full py-20 text-center bg-white rounded-2xl border-2 border-dashed border-gray-200">
-              <p className="text-gray-500">No goals set yet. Start by creating your first objective!</p>
-            </div>
-          )}
-        </div>
+          ))
+        )}
       </div>
+
+      <CreateGoalModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        refreshGoals={fetchGoals} 
+      />
     </div>
   );
 };
+
+const StatCard = ({ title, value, icon, colorClass, borderClass }) => (
+  <div className={`stat-card ${colorClass} ${borderClass}`}>
+    <div className="stat-icon-wrapper">{icon}</div>
+    <div className="stat-info">
+      <span className="stat-label">{title}:</span>
+      <span className="stat-value">{value}</span>
+    </div>
+  </div>
+);
 
 export default Dashboard;

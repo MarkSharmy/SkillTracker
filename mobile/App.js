@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import the context
+import { AuthContext } from './AuthContext';
 
 import LoginScreen from './screens/LoginScreen';
 import Dashboard from './screens/Dashboard';
@@ -16,8 +19,19 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState(null);
 
+  // Auth logic exposed to other screens
+  const authContext = useMemo(() => ({
+    signIn: async (token) => {
+      await AsyncStorage.setItem('token', token);
+      setUserToken(token);
+    },
+    signOut: async () => {
+      await AsyncStorage.removeItem('token');
+      setUserToken(null);
+    },
+  }), []);
+
   useEffect(() => {
-    // Check for token on boot
     const bootstrapAsync = async () => {
       let token;
       try {
@@ -28,11 +42,9 @@ export default function App() {
       setUserToken(token);
       setIsLoading(false);
     };
-
     bootstrapAsync();
   }, []);
 
-  // Loading Screen (prevents flicker)
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -42,25 +54,25 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {userToken == null ? (
-          // AUTH STACK
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : (
-          // APP STACK
-          <>
-            <Stack.Screen 
-              name="Dashboard" 
-              component={Dashboard} 
-              options={{ headerShown: true, title: 'Skill Tracker' }} 
-            />
-            <Stack.Screen name="GoalDetail" component={GoalDetail} />
-            <Stack.Screen name="TaskDetail" component={TaskDetail} />
-            <Stack.Screen name="SubtaskDetail" component={SubtaskDetail} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthContext.Provider value={authContext}>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {userToken == null ? (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          ) : (
+            <>
+              <Stack.Screen 
+                name="Dashboard" 
+                component={Dashboard} 
+                options={{ headerShown: true, title: 'Skill Tracker' }} 
+              />
+              <Stack.Screen name="GoalDetail" component={GoalDetail} />
+              <Stack.Screen name="TaskDetail" component={TaskDetail} />
+              <Stack.Screen name="SubtaskDetail" component={SubtaskDetail} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthContext.Provider>
   );
 }

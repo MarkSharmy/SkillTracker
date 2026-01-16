@@ -1,49 +1,85 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { API } from '../api';
+import { Target, Mail, Lock, ArrowRight } from 'lucide-react';
+import './Auth.css';
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
-      const { data } = await API.post('/users/login', formData);
-      localStorage.setItem('token', data.token);
+      const response = await API.post('/users/login', { email, password });
+      localStorage.setItem('token', response.data.token);
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err.response?.data?.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8 p-10 bg-white rounded-2xl shadow-xl">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">Welcome back</h2>
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email address"
-            required
-            className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          />
-          <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-            Sign In
+    <div className="auth-container">
+      <div className="auth-card animate-pop">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <Target size={32} />
+          </div>
+          <h1 className="auth-title">Welcome Back</h1>
+          <p className="auth-subtitle">Continue your journey to mastery</p>
+        </div>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <form onSubmit={handleLogin} className="auth-form">
+          <div className="auth-input-group">
+            <label>Email Address</label>
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={18} />
+              <input 
+                type="email" 
+                placeholder="name@company.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required 
+              />
+            </div>
+          </div>
+
+          <div className="auth-input-group">
+            <div className="label-row">
+              <label>Password</label>
+              <Link to="/forgot-password" size="xs" className="forgot-link">Forgot?</Link>
+            </div>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required 
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="auth-submit-btn" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In'} 
+            {!loading && <ArrowRight size={18} />}
           </button>
         </form>
-        <p className="text-center text-sm text-gray-600">
-          Don't have an account? <Link to="/register" className="text-blue-600 hover:underline">Sign up</Link>
+
+        <p className="auth-footer">
+          Don't have an account? <Link to="/register">Create one for free</Link>
         </p>
       </div>
     </div>
