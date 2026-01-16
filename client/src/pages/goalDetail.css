@@ -2,6 +2,7 @@
 
 .goaldetail-container {
   min-height: 100vh;
+  width: 100vw;
   background-color: #f8f9fa;
   padding-bottom: 5rem;
 }
